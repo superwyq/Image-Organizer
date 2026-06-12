@@ -2,7 +2,6 @@
   <img src="https://img.shields.io/github/v/release/superwyq/Image-Organizer?style=flat-square" alt="Version">
   <img src="https://img.shields.io/github/downloads/superwyq/Image-Organizer/total?style=flat-square" alt="Downloads">
   <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Obsidian-%5E1.0.0-purple?style=flat-square" alt="Obsidian">
 </p>
 
 <h1 align="center">Image Organizer</h1>
@@ -15,16 +14,21 @@
 
 ## Table of Contents
 
+- [Table of Contents](#table-of-contents)
 - [Features](#features)
 - [Screenshots](#screenshots)
+  - [Sidebar Manager](#sidebar-manager)
+  - [Image Insert Format Dialog](#image-insert-format-dialog)
 - [Installation](#installation)
+  - [Manual Installation](#manual-installation)
 - [Quick Start](#quick-start)
 - [Settings](#settings)
 - [Commands](#commands)
-- [Sidebar Manager](#sidebar-manager)
+- [Sidebar Manager](#sidebar-manager-1)
 - [Image Insertion with Formatting](#image-insertion-with-formatting)
 - [Metadata Format](#metadata-format)
 - [Development](#development)
+  - [Release artifacts](#release-artifacts)
 - [Privacy](#privacy)
 - [License](#license)
 

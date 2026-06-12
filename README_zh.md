@@ -2,7 +2,6 @@
   <img src="https://img.shields.io/github/v/release/superwyq/Image-Organizer?style=flat-square" alt="版本">
   <img src="https://img.shields.io/github/downloads/superwyq/Image-Organizer/total?style=flat-square" alt="下载量">
   <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="开源协议">
-  <img src="https://img.shields.io/badge/Obsidian-%5E1.0.0-purple?style=flat-square" alt="Obsidian">
 </p>
 
 <h1 align="center">Image Organizer</h1>
@@ -15,16 +14,21 @@
 
 ## 目录
 
+- [目录](#目录)
 - [功能概览](#功能概览)
 - [截图](#截图)
+  - [侧边栏管理视图](#侧边栏管理视图)
+  - [图片插入格式弹窗](#图片插入格式弹窗)
 - [安装](#安装)
+  - [手动安装](#手动安装)
 - [快速开始](#快速开始)
 - [设置项](#设置项)
 - [命令](#命令)
-- [侧边栏管理视图](#侧边栏管理视图)
+- [侧边栏管理视图](#侧边栏管理视图-1)
 - [图片插入格式](#图片插入格式)
 - [元数据格式](#元数据格式)
 - [开发](#开发)
+  - [发布产物](#发布产物)
 - [隐私说明](#隐私说明)
 - [开源协议](#开源协议)
 
