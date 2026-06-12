@@ -1,0 +1,293 @@
+.image-metadata-view {
+	padding: 12px;
+}
+
+.image-metadata-controls,
+.image-metadata-batch-controls {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	margin-bottom: 12px;
+	flex-wrap: wrap;
+}
+
+.image-metadata-controls select,
+.image-metadata-controls input {
+	min-width: 180px;
+	flex: 1;
+}
+
+.image-metadata-search-group {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	flex: 2 1 520px;
+	min-width: min(100%, 320px);
+}
+
+.image-metadata-search-group input {
+	min-width: 120px;
+}
+
+.image-metadata-search-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	min-width: 92px;
+	font-weight: 600;
+	white-space: nowrap;
+	transition: background-color 120ms ease, transform 120ms ease, opacity 120ms ease;
+}
+
+.image-metadata-search-button:not(:disabled):hover {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	transform: translateY(-1px);
+}
+
+.image-metadata-search-button:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
+.image-metadata-search-button.is-loading {
+	position: relative;
+}
+
+.image-metadata-search-button.is-loading::after {
+	content: '';
+	width: 10px;
+	height: 10px;
+	border: 2px solid currentColor;
+	border-right-color: transparent;
+	border-radius: 50%;
+	animation: image-metadata-spin 700ms linear infinite;
+}
+
+@keyframes image-metadata-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.image-metadata-batch-controls button {
+	white-space: nowrap;
+}
+
+.image-metadata-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.image-metadata-card {
+	display: flex;
+	gap: 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 10px;
+	background: var(--background-primary);
+}
+
+.image-metadata-card.is-selected {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+.image-metadata-checkbox {
+	align-self: flex-start;
+	margin-top: 28px;
+}
+
+.image-metadata-thumbnail {
+	width: 72px;
+	height: 72px;
+	object-fit: cover;
+	border-radius: 6px;
+	background: var(--background-secondary);
+}
+
+.image-metadata-card-body {
+	flex: 1;
+	min-width: 0;
+}
+
+.image-metadata-path {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	word-break: break-all;
+}
+
+.image-metadata-keywords {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+	margin-top: 6px;
+}
+
+.image-metadata-keyword-tag {
+	border-radius: 999px;
+	padding: 2px 8px;
+	font-size: var(--font-ui-smaller);
+	font-weight: 600;
+}
+
+.image-metadata-keyword-tag[data-color="0"] {
+	background: rgba(230, 126, 34, 0.18);
+	color: #e67e22;
+}
+
+.image-metadata-keyword-tag[data-color="1"] {
+	background: rgba(52, 152, 219, 0.18);
+	color: #3498db;
+}
+
+.image-metadata-keyword-tag[data-color="2"] {
+	background: rgba(46, 204, 113, 0.18);
+	color: #2ecc71;
+}
+
+.image-metadata-keyword-tag[data-color="3"] {
+	background: rgba(155, 89, 182, 0.18);
+	color: #9b59b6;
+}
+
+.image-metadata-keyword-tag[data-color="4"] {
+	background: rgba(231, 76, 60, 0.18);
+	color: #e74c3c;
+}
+
+.image-metadata-keyword-tag[data-color="5"] {
+	background: rgba(241, 196, 15, 0.18);
+	color: #b7950b;
+}
+
+.image-metadata-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.image-metadata-insert-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	font-weight: 600;
+	border-color: var(--interactive-accent);
+}
+
+.image-metadata-insert-button:not(:disabled):hover {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.image-metadata-insert-button.is-inserting {
+	opacity: 0.75;
+}
+
+.image-metadata-insert-button.is-inserted {
+	background-color: var(--background-modifier-success);
+	color: var(--text-normal);
+}
+
+.modal:has(.image-metadata-modal),
+.modal:has(.image-metadata-category-modal),
+.modal:has(.image-metadata-batch-index-modal),
+.modal:has(.image-metadata-insert-modal) {
+	width: min(820px, 92vw);
+	max-width: 92vw;
+}
+
+.image-metadata-modal,
+.image-metadata-category-modal,
+.image-metadata-batch-index-modal,
+.image-metadata-insert-modal {
+	width: 100%;
+	box-sizing: border-box;
+	overflow-x: hidden;
+}
+
+.image-metadata-modal .setting-item,
+.image-metadata-category-modal .setting-item,
+.image-metadata-batch-index-modal .setting-item,
+.image-metadata-insert-modal .setting-item {
+	align-items: flex-start;
+	gap: 16px;
+}
+
+.image-metadata-modal .setting-item-info,
+.image-metadata-category-modal .setting-item-info,
+.image-metadata-batch-index-modal .setting-item-info,
+.image-metadata-insert-modal .setting-item-info {
+	min-width: 160px;
+	max-width: 220px;
+}
+
+.image-metadata-modal .setting-item-control,
+.image-metadata-category-modal .setting-item-control,
+.image-metadata-batch-index-modal .setting-item-control,
+.image-metadata-insert-modal .setting-item-control {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.image-metadata-modal input[type="text"],
+.image-metadata-category-modal input[type="text"],
+.image-metadata-batch-index-modal input[type="text"],
+.image-metadata-insert-modal input[type="text"],
+.image-metadata-modal textarea,
+.image-metadata-batch-index-modal textarea {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.image-metadata-modal textarea,
+.image-metadata-batch-index-modal textarea {
+	min-height: 110px;
+}
+
+.image-metadata-insert-preview {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 12px;
+	background: var(--background-secondary);
+	min-height: 120px;
+	max-height: 300px;
+	overflow: auto;
+}
+
+.image-metadata-insert-code {
+	display: block;
+	white-space: pre-wrap;
+	word-break: break-all;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 10px;
+	background: var(--code-background);
+	max-height: 160px;
+	overflow: auto;
+}
+
+.image-metadata-batch-index-actions {
+	display: flex;
+	gap: 8px;
+	margin: 8px 0;
+}
+
+.image-metadata-batch-index-list {
+	max-height: 260px;
+	overflow: auto;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 8px;
+}
+
+.image-metadata-batch-index-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	padding: 4px 0;
+	word-break: break-all;
+}

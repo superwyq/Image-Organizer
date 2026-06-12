@@ -1,0 +1,10 @@
+{
+	"id": "image-metadata-manager",
+	"name": "Image Organizer",
+	"version": "1.0.0",
+	"minAppVersion": "1.0.0",
+	"description": "Organize images in Obsidian with categories, keywords, and metadata — insert images with customizable HTML+CSS formatting.",
+	"author": "",
+	"license": "MIT",
+	"isDesktopOnly": false
+}
