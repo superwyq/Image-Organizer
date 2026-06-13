@@ -118,26 +118,43 @@ export class ImageMetadataView extends ItemView {
 		};
 		this.updateSearchButtonState(searchButton);
 
-		controls.createEl('button', { text: '刷新' }).onclick = () => {
-			void this.render();
-		};
-		controls.createEl('button', { text: '新建分类' }).onclick = () => {
-			void this.host.createCategory().then(() => this.render());
-		};
-
 		const batchControls = contentEl.createDiv({ cls: 'image-metadata-batch-controls' });
-		batchControls.createEl('button', { text: '全选当前结果' }).onclick = () => {
-			for (const item of filtered) {
-				this.selectedPaths.add(item.path);
-			}
+		this.renderSelectionToggle(batchControls, filtered);
+		batchControls.createEl('button', { text: '刷新' }).onclick = () => {
 			void this.render();
 		};
-		batchControls.createEl('button', { text: '清空选择' }).onclick = () => {
-			this.selectedPaths.clear();
-			void this.render();
+		batchControls.createEl('button', { text: '新建分类' }).onclick = () => {
+			void this.host.createCategory().then(() => this.render());
 		};
 		batchControls.createEl('button', { text: '批量移动' }).onclick = () => this.batchMove();
 		batchControls.createEl('button', { text: '批量删除' }).onclick = () => this.batchDelete();
+	}
+
+	private renderSelectionToggle(containerEl: HTMLElement, filtered: CategorizedEntry[]): void {
+		const selectablePaths = filtered.map((item) => item.path);
+		const selectedCount = selectablePaths.filter((path) => this.selectedPaths.has(path)).length;
+		const allSelected = selectablePaths.length > 0 && selectedCount === selectablePaths.length;
+		const partiallySelected = selectedCount > 0 && selectedCount < selectablePaths.length;
+		const toggleLabel = containerEl.createEl('label', { cls: 'image-metadata-selection-toggle' });
+		const checkbox = toggleLabel.createEl('input', { type: 'checkbox', cls: 'image-metadata-selection-checkbox' });
+		checkbox.checked = allSelected;
+		checkbox.indeterminate = partiallySelected;
+		checkbox.disabled = selectablePaths.length === 0;
+		toggleLabel.toggleClass('is-partial', partiallySelected);
+		toggleLabel.toggleClass('is-checked', allSelected);
+		toggleLabel.toggleClass('is-disabled', selectablePaths.length === 0);
+		const text = allSelected ? '取消全选' : partiallySelected ? `已选 ${selectedCount} / ${selectablePaths.length}` : '全选当前结果';
+		toggleLabel.createSpan({ text, cls: 'image-metadata-selection-label' });
+		checkbox.onchange = () => {
+			if (checkbox.checked) {
+				for (const path of selectablePaths) {
+					this.selectedPaths.add(path);
+				}
+			} else {
+				this.selectedPaths.clear();
+			}
+			void this.render();
+		};
 	}
 
 	private renderCard(list: HTMLElement, item: CategorizedEntry): void {

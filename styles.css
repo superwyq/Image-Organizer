@@ -4,29 +4,41 @@
 
 .image-metadata-controls,
 .image-metadata-batch-controls {
-	display: flex;
+	display: grid;
 	gap: 8px;
 	align-items: center;
 	margin-bottom: 12px;
-	flex-wrap: wrap;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.image-metadata-controls {
+	grid-template-columns: minmax(96px, 0.8fr) minmax(0, 2.6fr);
+}
+
+.image-metadata-batch-controls {
+	display: flex;
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	padding-bottom: 2px;
 }
 
 .image-metadata-controls select,
 .image-metadata-controls input {
-	min-width: 180px;
-	flex: 1;
+	min-width: 0;
+	width: 100%;
 }
 
 .image-metadata-search-group {
-	display: flex;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) max-content;
 	gap: 8px;
 	align-items: center;
-	flex: 2 1 520px;
-	min-width: min(100%, 320px);
+	min-width: 0;
 }
 
 .image-metadata-search-group input {
-	min-width: 120px;
+	min-width: 0;
 }
 
 .image-metadata-search-button {
@@ -71,8 +83,71 @@
 	}
 }
 
+.image-metadata-controls button,
 .image-metadata-batch-controls button {
 	white-space: nowrap;
+	height: 32px;
+	min-width: 0;
+	padding-inline: 10px;
+}
+
+.image-metadata-selection-toggle {
+	display: inline-flex;
+	align-items: center;
+	flex: 0 0 150px;
+	gap: 6px;
+	min-height: 32px;
+	max-width: 150px;
+	padding: 4px 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-secondary);
+	cursor: pointer;
+	user-select: none;
+	transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+.image-metadata-selection-toggle:hover:not(.is-disabled) {
+	border-color: var(--interactive-accent);
+	background: var(--background-modifier-hover);
+	transform: translateY(-1px);
+}
+
+.image-metadata-selection-toggle.is-checked,
+.image-metadata-selection-toggle.is-partial {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent) 55%, transparent);
+}
+
+.image-metadata-selection-toggle.is-disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
+.image-metadata-selection-checkbox {
+	margin: 0;
+	accent-color: var(--interactive-accent);
+}
+
+.image-metadata-selection-label {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: var(--font-ui-small);
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+@media (max-width: 820px) {
+	.image-metadata-controls {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 620px) {
+	.image-metadata-search-group {
+		grid-template-columns: 1fr;
+	}
 }
 
 .image-metadata-list {
