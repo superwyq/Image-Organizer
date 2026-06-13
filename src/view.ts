@@ -11,6 +11,7 @@ export interface ViewHost {
 	moveImagesToCategory(paths: string[], target: ImageCategory): Promise<void>;
 	deleteImageAndMetadata(category: ImageCategory, path: string): Promise<void>;
 	insertImageLink(path: string): Promise<void>;
+	createCategory(): Promise<void>;
 }
 
 export class ImageMetadataView extends ItemView {
@@ -119,6 +120,9 @@ export class ImageMetadataView extends ItemView {
 
 		controls.createEl('button', { text: '刷新' }).onclick = () => {
 			void this.render();
+		};
+		controls.createEl('button', { text: '新建分类' }).onclick = () => {
+			void this.host.createCategory().then(() => this.render());
 		};
 
 		const batchControls = contentEl.createDiv({ cls: 'image-metadata-batch-controls' });

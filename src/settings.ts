@@ -122,28 +122,9 @@ export class ImageMetadataSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('新增分类')
-			.setDesc('选择图片文件夹后，元数据 JSON 默认保存在同一文件夹内，也可自定义路径。')
+			.setDesc('默认会在图片库 _images 下按分类名称创建文件夹，也可自定义路径。')
 			.addButton((button) => button.setButtonText('添加分类').setCta().onClick(() => {
-				new CategoryEditModal(this.app, '新增分类', async (category) => {
-					if (!category.name) {
-						new Notice('分类名称不能为空。');
-						return;
-					}
-					if (this.plugin.settings.categories.some((item) => item.name === category.name)) {
-						new Notice('分类名称已存在。');
-						return;
-					}
-					await this.plugin.addCategory({
-						...category,
-						folderPath: category.folderPath || `_images/${category.name}`,
-						metadataPath: category.metadataPath || metadataPathForCategory(category.name),
-					});
-					this.display();
-				}, {
-					name: '',
-					folderPath: '_images',
-					metadataPath: metadataPathInFolder('_images'),
-				}).open();
+				void this.plugin.createCategory().then(() => this.display());
 			}));
 	}
 

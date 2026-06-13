@@ -2,11 +2,15 @@ import { Editor, EditorPosition, MarkdownFileInfo, MarkdownView, Menu, Notice, P
 import { registerCommands } from './commands';
 import { ClassificationDB } from './db';
 import { ImageFileManager } from './file-manager';
-import { BatchIndexModal, CategorySuggestModal, ImageInsertModal, MetadataModal } from './modals';
-import { DEFAULT_CATEGORY, DEFAULT_SETTINGS, ImageMetadataSettingTab, normalizeSettings } from './settings';
+import { BatchIndexModal, CategoryEditModal, CategorySuggestModal, ImageInsertModal, MetadataModal } from './modals';
+import { DEFAULT_CATEGORY, DEFAULT_SETTINGS, ImageMetadataSettingTab, metadataPathForCategory, normalizeSettings } from './settings';
 import { DEFAULT_CATEGORY_NAME, ImageCategory, ImageMetadataSettings, MetadataEntry, MetadataFormResult, VIEW_TYPE_IMAGE_METADATA } from './types';
-import { categoryForPath, isImagePath, normalizeVaultPath, pathInFolder } from './utils';
+import { basename, categoryForPath, ensureFolder, isImagePath, normalizeVaultPath, pathInFolder } from './utils';
 import { ImageMetadataView } from './view';
+
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 export default class ImageMetadataPlugin extends Plugin {
 	settings!: ImageMetadataSettings;
@@ -14,6 +18,7 @@ export default class ImageMetadataPlugin extends Plugin {
 	private fileManager!: ImageFileManager;
 	private movingPaths = new Set<string>();
 	private lastEditorContext: { editor: Editor; filePath: string; cursor: EditorPosition } | null = null;
+	private recentPasteContext: { editor: Editor; filePath: string; cursor: EditorPosition; time: number } | null = null;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -29,6 +34,7 @@ export default class ImageMetadataPlugin extends Plugin {
 		this.registerVaultEvents();
 		this.registerFileMenu();
 		this.registerEditorTracking();
+		this.registerImageHtmlPostProcessor();
 	}
 
 	onunload(): void {
@@ -59,17 +65,17 @@ export default class ImageMetadataPlugin extends Plugin {
 		await this.app.workspace.revealLeaf(leaf);
 	}
 
-	async processImage(file: TFile, forcePrompt = false): Promise<void> {
+	async processImage(file: TFile, forcePrompt = false, replacePastedLink = false): Promise<void> {
 		if (!isImagePath(file.path, this.settings.imageExtensions)) {
 			return;
 		}
 		const existing = await this.db.findByPath(this.settings.categories, file.path);
-		if (existing && !window.confirm('该图片已有元数据，是否更新现有记录？')) {
+		if (existing && !forcePrompt) {
 			return;
 		}
 
 		const chooseCategory = (category: ImageCategory): void => {
-			void this.openMetadataModal(file, category, existing?.entry);
+			void this.openMetadataModal(file, category, existing?.entry, replacePastedLink);
 		};
 
 		if (forcePrompt || this.settings.forceCategorySelection) {
@@ -83,7 +89,7 @@ export default class ImageMetadataPlugin extends Plugin {
 			description: '',
 			keywords: [],
 			customFields: {},
-		}, existing?.entry);
+		}, existing?.entry, replacePastedLink);
 	}
 
 	async editImageMetadata(file: TFile): Promise<void> {
@@ -169,13 +175,72 @@ export default class ImageMetadataPlugin extends Plugin {
 		new Notice('图片 HTML 已插入到最近的 Markdown 光标位置。');
 	}
 
+	private openInsertModalForPastedImage(file: TFile, originalPath: string): void {
+		const context = this.lastEditorContext;
+		if (!context) {
+			return;
+		}
+		ImageInsertModal.forFile(this.app, file, (html) => {
+			if (this.replacePastedMarkdownImage(context, originalPath, html)) {
+				new Notice('已将粘贴图片链接替换为 HTML 图片。');
+				return;
+			}
+			this.insertHtmlAtContext(context, html);
+		}).open();
+	}
+
+	private replacePastedMarkdownImage(context: { editor: Editor; filePath: string; cursor: EditorPosition }, originalPath: string, html: string): boolean {
+		const text = context.editor.getValue();
+		const normalizedPath = normalizeVaultPath(originalPath);
+		const fileName = basename(originalPath);
+		const names = [...new Set([normalizedPath, fileName, encodeURI(normalizedPath), encodeURI(fileName)])].map((item) => escapeRegExp(item));
+		const pattern = new RegExp(`!\\[[^\\]]*\\]\\((?:${names.join('|')})\\)|!\\[\\[(?:${names.join('|')})(?:\\|[^\\]]*)?\\]\\]`, 'g');
+		let match: RegExpExecArray | null = null;
+		let lastMatch: RegExpExecArray | null = null;
+		while ((match = pattern.exec(text)) !== null) {
+			lastMatch = match;
+		}
+		if (!lastMatch || lastMatch.index === undefined) {
+			return false;
+		}
+		const from = context.editor.offsetToPos(lastMatch.index);
+		const to = context.editor.offsetToPos(lastMatch.index + lastMatch[0].length);
+		context.editor.replaceRange(html, from, to);
+		return true;
+	}
+
 	async addCategory(category: ImageCategory): Promise<void> {
-		this.settings.categories.push({
+		const normalized = {
 			...category,
 			folderPath: normalizeVaultPath(category.folderPath),
 			metadataPath: normalizeVaultPath(category.metadataPath),
-		});
+		};
+		await ensureFolder(this.app.vault, normalized.folderPath);
+		this.settings.categories.push(normalized);
 		await this.saveSettings();
+	}
+
+	async createCategory(): Promise<void> {
+		return new Promise((resolve) => {
+			new CategoryEditModal(this.app, '新增分类', async (category) => {
+				if (!category.name) {
+					new Notice('分类名称不能为空。');
+					resolve();
+					return;
+				}
+				if (this.settings.categories.some((item) => item.name === category.name)) {
+					new Notice('分类名称已存在。');
+					resolve();
+					return;
+				}
+				await this.addCategory({
+					...category,
+					folderPath: category.folderPath || `_images/${category.name}`,
+					metadataPath: category.metadataPath || metadataPathForCategory(category.name),
+				});
+				resolve();
+			}).open();
+		});
 	}
 
 	async updateCategory(oldName: string, updated: ImageCategory): Promise<void> {
@@ -246,6 +311,19 @@ export default class ImageMetadataPlugin extends Plugin {
 	}
 
 	private registerEditorTracking(): void {
+		this.registerDomEvent(activeDocument, 'paste', () => {
+			const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (!markdownView) {
+				return;
+			}
+			this.recentPasteContext = {
+				editor: markdownView.editor,
+				filePath: markdownView.file?.path ?? '',
+				cursor: markdownView.editor.getCursor(),
+				time: Date.now(),
+			};
+		});
+
 		this.registerEvent(this.app.workspace.on('editor-change', (editor: Editor, info: MarkdownView | MarkdownFileInfo) => {
 			const filePath = info.file?.path ?? '';
 			this.lastEditorContext = {
@@ -274,6 +352,21 @@ export default class ImageMetadataPlugin extends Plugin {
 		};
 	}
 
+	private registerImageHtmlPostProcessor(): void {
+		this.registerMarkdownPostProcessor((el, ctx) => {
+			for (const img of Array.from(el.querySelectorAll<HTMLImageElement>('img[data-image-organizer-src]'))) {
+				const source = img.getAttribute('data-image-organizer-src');
+				if (!source) {
+					continue;
+				}
+				const file = this.app.metadataCache.getFirstLinkpathDest(decodeURI(source), ctx.sourcePath);
+				if (file instanceof TFile) {
+					img.src = this.app.vault.getResourcePath(file);
+				}
+			}
+		});
+	}
+
 	private registerFileMenu(): void {
 		this.registerEvent(this.app.workspace.on('file-menu', (menu: Menu, file: TAbstractFile) => {
 			if (!(file instanceof TFolder)) {
@@ -290,10 +383,23 @@ export default class ImageMetadataPlugin extends Plugin {
 		}));
 	}
 
+	private shouldReplacePastedLink(): boolean {
+		const context = this.recentPasteContext;
+		if (!context || Date.now() - context.time > 10000) {
+			return false;
+		}
+		this.lastEditorContext = {
+			editor: context.editor,
+			filePath: context.filePath,
+			cursor: context.cursor,
+		};
+		return true;
+	}
+
 	private registerVaultEvents(): void {
 		this.registerEvent(this.app.vault.on('create', (file) => {
 			if (file instanceof TFile && isImagePath(file.path, this.settings.imageExtensions) && !this.movingPaths.has(file.path)) {
-				void this.processImage(file);
+				void this.processImage(file, false, this.shouldReplacePastedLink());
 			}
 		}));
 
@@ -335,13 +441,13 @@ export default class ImageMetadataPlugin extends Plugin {
 		new Notice(`已为 ${result.files.length} 张图片建立索引。`);
 	}
 
-	private async openMetadataModal(file: TFile, category: ImageCategory, existing?: MetadataEntry): Promise<void> {
+	private async openMetadataModal(file: TFile, category: ImageCategory, existing?: MetadataEntry, replacePastedLink = false): Promise<void> {
 		new MetadataModal(this.app, file, category.name, this.settings.customFields, (result) => {
-			void this.saveMetadataAndMove(file, category, result, existing);
+			void this.saveMetadataAndMove(file, category, result, existing, replacePastedLink);
 		}, existing).open();
 	}
 
-	private async saveMetadataAndMove(file: TFile, category: ImageCategory, result: MetadataFormResult, existing?: MetadataEntry): Promise<void> {
+	private async saveMetadataAndMove(file: TFile, category: ImageCategory, result: MetadataFormResult, existing?: MetadataEntry, replacePastedLink = false): Promise<void> {
 		const originalPath = file.path;
 		const moved = await this.moveFile(file, category, result.fileName);
 		if (!moved) {
@@ -355,11 +461,17 @@ export default class ImageMetadataPlugin extends Plugin {
 			await this.db.remove(oldCategory, originalPath);
 		}
 		await this.db.upsert(category, moved.path, this.createEntry(result, existing));
+		if (originalPath !== moved.path) {
+			await this.updateImageHtmlReferences(originalPath, moved.path);
+		}
 		if (this.settings.cleanupEmptyFolders && originalPath !== moved.path) {
 			await this.fileManager.cleanupEmptyFolder(originalPath);
 		}
 		await this.updateDatabaseIndex();
 		await this.refreshViews();
+		if (replacePastedLink) {
+			this.openInsertModalForPastedImage(moved, originalPath);
+		}
 		new Notice('图片元数据已保存。');
 	}
 
@@ -387,6 +499,9 @@ export default class ImageMetadataPlugin extends Plugin {
 			await this.db.remove(source.category, originalPath);
 		}
 		await this.db.upsert(target, moved.path, { ...entry, fileName: targetBaseName ?? entry.fileName, lastModified: new Date().toISOString() });
+		if (originalPath !== moved.path) {
+			await this.updateImageHtmlReferences(originalPath, moved.path);
+		}
 		await this.updateDatabaseIndex();
 		await this.refreshViews();
 		return moved;
@@ -405,6 +520,18 @@ export default class ImageMetadataPlugin extends Plugin {
 		}
 	}
 
+	private async updateImageHtmlReferences(oldPath: string, newPath: string): Promise<void> {
+		const oldEncoded = encodeURI(normalizeVaultPath(oldPath));
+		const newEncoded = encodeURI(normalizeVaultPath(newPath));
+		for (const file of this.app.vault.getMarkdownFiles()) {
+			const content = await this.app.vault.read(file);
+			const updated = content.split(oldEncoded).join(newEncoded);
+			if (updated !== content) {
+				await this.app.vault.modify(file, updated);
+			}
+		}
+	}
+
 	private async handleRename(file: TFile, oldPath: string): Promise<void> {
 		if (this.movingPaths.has(oldPath) || this.movingPaths.has(file.path)) {
 			return;
@@ -419,6 +546,7 @@ export default class ImageMetadataPlugin extends Plugin {
 		} else {
 			await this.db.moveEntry(source.category, targetCategory, oldPath, file.path);
 		}
+		await this.updateImageHtmlReferences(oldPath, file.path);
 		await this.updateDatabaseIndex();
 		await this.refreshViews();
 	}

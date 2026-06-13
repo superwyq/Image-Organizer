@@ -1,4 +1,4 @@
-import { TFile, Vault } from 'obsidian';
+import { TFile } from 'obsidian';
 
 export type ImageAlignment = 'left' | 'center' | 'right';
 export type BorderStyle = 'none' | 'solid' | 'dashed' | 'dotted';
@@ -29,14 +29,19 @@ export const DEFAULT_IMAGE_INSERT_OPTIONS: ImageInsertOptions = {
 	alt: '',
 };
 
-export function buildImageHtml(file: TFile, vault: Vault, options: ImageInsertOptions): string {
-	return buildImageHtmlForSource(vault.getResourcePath(file), options.alt || file.basename, options);
+export function buildImageHtml(file: TFile, options: ImageInsertOptions): string {
+	return buildImageHtmlForSource(getPersistentImageSource(file), options.alt || file.basename, options);
+}
+
+export function getPersistentImageSource(file: TFile): string {
+	return encodeURI(file.path);
 }
 
 export function buildImageHtmlForSource(src: string, alt: string, options: ImageInsertOptions): string {
 	const imgStyles = buildImageStyles(options);
 	const wrapperStyles = buildWrapperStyles(options.alignment);
-	return `<div style="${wrapperStyles}"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" style="${imgStyles}"></div>`;
+	const escapedSrc = escapeHtml(src);
+	return `<div style="${wrapperStyles}"><img src="${escapedSrc}" data-image-organizer-src="${escapedSrc}" alt="${escapeHtml(alt)}" style="${imgStyles}"></div>`;
 }
 
 export function buildImageStyles(options: ImageInsertOptions): string {
@@ -79,7 +84,7 @@ export function parseImageHtml(html: string): ParsedImageHtml | null {
 		return null;
 	}
 	const imgTag = imgMatch[0];
-	const src = getAttribute(imgTag, 'src');
+	const src = getAttribute(imgTag, 'data-image-organizer-src') ?? getAttribute(imgTag, 'src');
 	if (!src) {
 		return null;
 	}

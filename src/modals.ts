@@ -1,5 +1,5 @@
 import { App, FuzzySuggestModal, Modal, Setting, TFile, TFolder } from 'obsidian';
-import { buildImageHtmlForSource, DEFAULT_IMAGE_INSERT_OPTIONS, ImageInsertOptions } from './insert-format';
+import { buildImageHtmlForSource, DEFAULT_IMAGE_INSERT_OPTIONS, ImageInsertOptions, getPersistentImageSource } from './insert-format';
 import { BatchIndexResult, ImageCategory, MetadataEntry, MetadataFormResult } from './types';
 import { basenameWithoutExtension, metadataPathInFolder, parseKeywords } from './utils';
 
@@ -164,7 +164,7 @@ export class CategoryEditModal extends Modal {
 
 		new Setting(contentEl)
 			.setName('图片文件夹')
-			.setDesc(this.folderPath || '请选择一个 vault 内文件夹')
+			.setDesc(this.folderPath || this.defaultFolderPath(this.name) || '将根据分类名称自动创建')
 			.addButton((button) => button.setButtonText('选择文件夹').onClick(() => {
 				new FolderSuggestModal(this.app, (folder) => {
 					this.folderPath = folder.path;
@@ -186,14 +186,20 @@ export class CategoryEditModal extends Modal {
 		new Setting(contentEl)
 			.addButton((button) => button.setButtonText('取消').onClick(() => this.close()))
 			.addButton((button) => button.setButtonText('保存').setCta().onClick(() => {
+				const folderPath = this.folderPath.trim() || this.defaultFolderPath(this.name);
 				this.onSubmit({
 					...this.existing,
 					name: this.name.trim(),
-					folderPath: this.folderPath.trim(),
-					metadataPath: this.metadataPath.trim() || metadataPathInFolder(this.folderPath),
+					folderPath,
+					metadataPath: this.metadataPath.trim() || metadataPathInFolder(folderPath),
 				});
 				this.close();
 			}));
+	}
+
+	private defaultFolderPath(name: string): string {
+		const safeName = name.trim().replace(/[\\/:*?"<>|]/g, '-');
+		return safeName ? `_images/${safeName}` : '';
 	}
 }
 
@@ -312,23 +318,26 @@ export class ImageInsertModal extends Modal {
 	private previewEl!: HTMLElement;
 	private codeEl!: HTMLElement;
 	private readonly source: string;
+	private readonly previewSource: string;
 	private readonly sourceLabel: string;
 
 	constructor(
 		app: App,
-		config: { source: string; label: string; alt: string; options?: ImageInsertOptions },
+		config: { source: string; label: string; alt: string; options?: ImageInsertOptions; previewSource?: string },
 		private readonly onSubmit: (html: string) => void,
 		private readonly submitText = '插入',
 	) {
 		super(app);
 		this.source = config.source;
+		this.previewSource = config.previewSource ?? config.source;
 		this.sourceLabel = config.label;
 		this.options = { ...DEFAULT_IMAGE_INSERT_OPTIONS, ...config.options, alt: config.options?.alt ?? config.alt };
 	}
 
 	static forFile(app: App, file: TFile, onSubmit: (html: string) => void): ImageInsertModal {
 		return new ImageInsertModal(app, {
-			source: app.vault.getResourcePath(file),
+			source: getPersistentImageSource(file),
+			previewSource: app.vault.getResourcePath(file),
 			label: file.path,
 			alt: file.basename,
 		}, onSubmit);
@@ -454,7 +463,7 @@ export class ImageInsertModal extends Modal {
 		const wrapper = this.previewEl.createDiv();
 		wrapper.setAttr('style', `text-align: ${this.options.alignment};`);
 		const img = wrapper.createEl('img');
-		img.src = this.source;
+		img.src = this.previewSource;
 		img.alt = this.options.alt || this.sourceLabel;
 		img.setAttr('style', html.match(/<img[^>]*style="([^"]*)"/)?.[1] ?? 'max-width: 100%; height: auto;');
 		this.codeEl.setText(html);

@@ -54,7 +54,7 @@ export function registerCommands(plugin: CommandHost): void {
 	plugin.addCommand({
 		id: 'format-inserted-html-image',
 		name: '修改已插入图片格式',
-		editorCallback: (editor: Editor) => {
+		editorCallback: (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
 			const target = findEditableImageHtml(editor);
 			if (!target) {
 				new Notice('请先选中本插件插入的 HTML 图片代码，或将光标放在该图片 HTML 块内。');
@@ -67,6 +67,7 @@ export function registerCommands(plugin: CommandHost): void {
 			}
 			new ImageInsertModal(plugin.app, {
 				source: parsed.src,
+				previewSource: resolvePreviewSource(plugin, parsed.src, ctx.file?.path ?? ''),
 				label: parsed.alt || parsed.src,
 				alt: parsed.alt,
 				options: parsed.options,
@@ -176,6 +177,14 @@ function findEditableImageHtml(editor: Editor): EditableImageHtml | null {
 		}
 	}
 	return null;
+}
+
+function resolvePreviewSource(plugin: CommandHost, src: string, sourcePath: string): string {
+	const file = plugin.app.metadataCache.getFirstLinkpathDest(decodeURI(src), sourcePath);
+	if (file instanceof TFile) {
+		return plugin.app.vault.getResourcePath(file);
+	}
+	return src;
 }
 
 function locateImageHtmlInText(text: string, from: EditorPosition): EditableImageHtml | null {
